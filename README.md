@@ -43,3 +43,7 @@ every changed Lua file before committing.
 
 The catalog format and richer requirement metadata are still evolving during
 alpha. Do not rely on it as a stable third-party API yet.
+
+## Future work
+
+- [Authenticate automation messages received over Rednet](docs/issues/authenticate-automation-rednet-messages.md)
