@@ -399,6 +399,24 @@ end
 
 -- drawing --------------------------------------------------------------------
 
+local ACTIONS = {
+    new    = resetGame,
+    pause  = pauseGame,
+    level  = cycleLevel,
+    rotate = function(st) rotate(st, 1) end,
+    left   = function(st) moveSide(st, -1) end,
+    right  = function(st) moveSide(st, 1) end,
+    down   = softDrop,
+    drop   = hardDrop,
+}
+
+-- Every button registers its own hit box while it is drawn, so a button can
+-- never be tappable where it is not visible, or visible where it is not tappable.
+local function button(st, win, x, y, text, bg, fg, action)
+    writeAt(win, x, y, bg, fg, text)
+    st.hit[#st.hit + 1] = {x1 = x, x2 = x + #text - 1, y = y, action = action}
+end
+
 local function drawTitle(st, win, W)
     writeAt(win, 1, 1, colors.cyan, colors.black, string.rep(" ", W))
     writeAt(win, 1, 1, colors.cyan, colors.black, " Tetris ")
@@ -409,14 +427,16 @@ local function drawTitle(st, win, W)
 end
 
 local function drawToolbar(st, win, W)
-    writeAt(win, 1, 2, colors.gray, colors.white, "[ New ]")
-    if W >= 17 then
-        writeAt(win, 9, 2, st.running and colors.orange or colors.green, colors.white,
-            st.running and "[ Pause ]" or "[ Start ]")
-    end
-    local levelText = "[ Lv " .. st.startLevel .. " ]"
-    if W >= 18 + #levelText then
-        writeAt(win, 19, 2, colors.gray, colors.white, levelText)
+    local pauseBg = st.running and colors.orange or colors.green
+    local pauseText = st.running and "Pause" or "Start"
+    if W >= 27 then
+        button(st, win, 1, 2, "[ New ]", colors.gray, colors.white, "new")
+        button(st, win, 9, 2, "[ " .. pauseText .. " ]", pauseBg, colors.white, "pause")
+        button(st, win, 19, 2, "[ Lv " .. st.startLevel .. " ]", colors.gray, colors.white, "level")
+    else
+        button(st, win, 1, 2, "[N]", colors.gray, colors.white, "new")
+        button(st, win, 5, 2, "[" .. string.sub(pauseText, 1, 1) .. "]", pauseBg, colors.white, "pause")
+        button(st, win, 9, 2, "[L" .. st.startLevel .. "]", colors.gray, colors.white, "level")
     end
 end
 
@@ -441,9 +461,15 @@ local function drawBoard(st, win, L)
         end
     end
 
+    -- A window shrunk mid-game keeps its taller board: show the bottom rows
+    -- rather than painting over the control and status rows.
+    local visible = math.min(st.boardH, L.H - 5)
+    if visible < 1 then return end
+    local firstRow = st.boardH - visible + 1
+
     local rightX = left + 1 + BOARD_W * cellW
-    for y = 1, st.boardH do
-        local sy = top + y - 1
+    for y = firstRow, st.boardH do
+        local sy = top + y - firstRow
         writeAt(win, left, sy, colors.gray, colors.gray, " ")
         for x = 1, BOARD_W do
             local sx = left + 1 + (x - 1) * cellW
@@ -493,23 +519,23 @@ end
 
 local function drawControls(st, win, W, H)
     local y1, y2 = H - 2, H - 1
-    local cx = math.max(1, math.floor((W - 5) / 2) + 1)
-
-    writeAt(win, cx, y1, colors.gray, colors.white, "[ ^ ]")
-    if cx + 11 <= W then
-        writeAt(win, cx + 6, y1, colors.gray, colors.white, "[Drop]")
-    end
-    if cx - 6 >= 1 then writeAt(win, cx - 6, y2, colors.gray, colors.white, "[ < ]") end
-    writeAt(win, cx, y2, colors.gray, colors.white, "[ v ]")
-    if cx + 10 <= W then writeAt(win, cx + 6, y2, colors.gray, colors.white, "[ > ]") end
-
-    if W >= 18 then
-        writeAt(win, 1, y2, st.running and colors.orange or colors.green, colors.white,
-            st.running and "[Pause]" or "[Start]")
-    end
-    if W >= 16 then
-        local levelText = "[Lv " .. st.startLevel .. "]"
-        writeAt(win, W - #levelText + 1, y2, colors.gray, colors.white, levelText)
+    local bg, fg = colors.gray, colors.white
+    if W >= 24 then
+        local cx = math.floor((W - 5) / 2) + 1
+        button(st, win, cx, y1, "[ ^ ]", bg, fg, "rotate")
+        if cx + 11 <= W then
+            button(st, win, cx + 6, y1, "[Drop]", bg, fg, "drop")
+        end
+        button(st, win, cx - 6, y2, "[ < ]", bg, fg, "left")
+        button(st, win, cx, y2, "[ v ]", bg, fg, "down")
+        button(st, win, cx + 6, y2, "[ > ]", bg, fg, "right")
+    else
+        local cx = math.floor((W - 3) / 2) + 1
+        button(st, win, cx, y1, "[^]", bg, fg, "rotate")
+        button(st, win, W - 2, y1, "[D]", bg, fg, "drop")
+        button(st, win, 1, y2, "[<]", bg, fg, "left")
+        button(st, win, cx, y2, "[v]", bg, fg, "down")
+        button(st, win, W - 2, y2, "[>]", bg, fg, "right")
     end
 end
 
@@ -531,6 +557,7 @@ function M.init(win, ctx)
         ctx = ctx,
         db = db,
         startLevel = db.startLevel,
+        hit = {},
     }
     resetGame(st)
     return st
@@ -538,6 +565,7 @@ end
 
 function M.draw(st, win)
     st.win = win
+    st.hit = {}
     local W, H = win.getSize()
     win.setBackgroundColor(colors.black)
     win.setTextColor(colors.white)
@@ -559,26 +587,12 @@ function M.draw(st, win)
 end
 
 local function handleTap(st, x, y)
-    local W, H = st.win.getSize()
-    if y == 2 then
-        if x >= 1 and x <= 7 then resetGame(st); return true end
-        if x >= 9 and x <= 17 then pauseGame(st); return true end
-        if x >= 19 and x <= 27 then cycleLevel(st); return true end
-    end
-
-    local y1, y2 = H - 2, H - 1
-    local cx = math.max(1, math.floor((W - 5) / 2) + 1)
-    if y == y1 then
-        if x >= cx and x <= cx + 4 then rotate(st, 1); return true end
-        if cx + 11 <= W and x >= cx + 6 and x <= cx + 11 then hardDrop(st); return true end
-    end
-    if y == y2 then
-        if cx - 6 >= 1 and x >= cx - 6 and x <= cx - 2 then moveSide(st, -1); return true end
-        if x >= cx and x <= cx + 4 then softDrop(st); return true end
-        if cx + 10 <= W and x >= cx + 6 and x <= cx + 10 then moveSide(st, 1); return true end
-        if W >= 18 and x >= 1 and x <= 6 then pauseGame(st); return true end
-        local levelText = "[Lv " .. st.startLevel .. "]"
-        if x >= W - #levelText + 1 and x <= W then cycleLevel(st); return true end
+    for i = 1, #st.hit do
+        local b = st.hit[i]
+        if y == b.y and x >= b.x1 and x <= b.x2 then
+            ACTIONS[b.action](st)
+            return true
+        end
     end
     return false
 end
