@@ -105,6 +105,18 @@ return {
         file        = "apps/2048.lua",
     },
     {
+        id          = "skyraid",
+        name        = "Sky Raid",
+        description = "Vertical shoot 'em up: dodge bullet patterns, clear waves, fight bosses",
+        status      = "alpha",
+        version     = "1.0",
+        category    = "games",
+        icon        = "SR",
+        iconBg      = colors.lightBlue,
+        iconFg      = colors.black,
+        file        = "apps/skyraid.lua",
+    },
+    {
         id          = "tetris",
         name        = "Tetris",
         description = "Falling blocks with next preview, ghost drop and saved best scores",
