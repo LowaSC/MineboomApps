@@ -104,4 +104,16 @@ return {
         iconFg      = colors.black,
         file        = "apps/2048.lua",
     },
+    {
+        id          = "tetris",
+        name        = "Tetris",
+        description = "Falling blocks with next preview, ghost drop and saved best scores",
+        status      = "alpha",
+        version     = "1.0",
+        category    = "games",
+        icon        = "Tt",
+        iconBg      = colors.cyan,
+        iconFg      = colors.black,
+        file        = "apps/tetris.lua",
+    },
 }

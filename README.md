@@ -30,7 +30,7 @@ modded peripherals or gameplay setup.
 
 | Application | Alpha status |
 |---|---|
-| Minesweeper, Snake, 2048 | Portable candidate; needs broader testing |
+| Minesweeper, Snake, 2048, Tetris | Portable candidate; needs broader testing |
 | Transformer | Requires PowerGrid-compatible gameplay setup |
 | RTC | Requires RS/material peripherals and configuration |
 | Factory, RS Store, Hub | Legacy integration; not portable yet |
