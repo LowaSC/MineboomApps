@@ -288,6 +288,7 @@ local function resetGame(st)
     st.running = false
     st.gameOver = false
     st.newBest = false
+    st.started = false
     st.timerId = nil
     spawnPiece(st)
     setStatus(st, "Start or tap a control")
@@ -297,6 +298,7 @@ local function startGame(st)
     if st.gameOver then resetGame(st) end
     if not st.running then
         st.running = true
+        st.started = true
         setStatus(st, "Running")
         scheduleTick(st)
     end
@@ -574,7 +576,9 @@ function M.draw(st, win)
         writeAt(win, 1, 1, colors.black, colors.red, "Too small")
         return
     end
-    if not st.running and not st.gameOver and boardHeightFor(H) ~= st.boardH then
+    -- Only a game nobody has started yet may be refitted to a resized window;
+    -- a paused game keeps its board and is clipped instead of being discarded.
+    if not st.started and not st.gameOver and boardHeightFor(H) ~= st.boardH then
         resetGame(st)
     end
     local L = layout(win)
