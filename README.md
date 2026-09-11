@@ -25,7 +25,7 @@ loads `apps/index.lua`, then downloads the selected file from `apps/`.
 
 The games are the most portable applications. Factory, RS Store and Hub still
 expect services and IDs from the maintainer's legacy world and are included for
-development/migration work. RTC and Transformer depend on their respective
+development/migration work. RTC and Transformer (PowerGrid) depend on their respective
 modded peripherals or gameplay setup.
 
 | Application | Status | Controls | Required mods | Description |
@@ -34,7 +34,7 @@ modded peripherals or gameplay setup.
 | RS Store | On hold | Mouse | RS Bridge peripheral (Refined Storage + Advanced Peripherals) | Legacy RS storage dashboard |
 | RTC — RS to chest | On hold | Mouse | RS Bridge peripheral (Refined Storage + Advanced Peripherals) | Pulls Material Checklist items from RS into a chest or buffer |
 | Hub | On hold | Mouse | None | Legacy server hub monitor |
-| Transformer | Works, not fully tested | Mouse, keyboard | PowerGrid | Winding calculator (turns ratio for target voltage) |
+| Transformer (PowerGrid) | Works, not fully tested | Mouse, keyboard | PowerGrid | Winding calculator (turns ratio for target voltage) |
 | Minesweeper | Fully working | Mouse | None | Classic mines game with touch open/flag mode |
 | Snake | Fully working | Mouse or keyboard | None | Classic snake game with saved best scores |
 | 2048 | Fully working | Mouse or keyboard | None | Classic 2048 sliding tile puzzle with saved best score |

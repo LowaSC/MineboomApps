@@ -57,8 +57,8 @@ return {
     },
 
     {
-        id          = "transformer",
-        name        = "Transformer",
+        id          = "transformer_powergrid",
+        name        = "Transformer (PowerGrid)",
         description = "PowerGrid transformer winding calculator (turns ratio for target voltage)",
         status      = "alpha",
         version     = "1.9",
@@ -66,7 +66,8 @@ return {
         icon        = "Tx",
         iconBg      = colors.orange,
         iconFg      = colors.black,
-        file        = "apps/transformer.lua",
+        file        = "apps/transformer_powergrid.lua",
+        requiredMods = { "PowerGrid" },
     },
     {
         id          = "minesweeper",
