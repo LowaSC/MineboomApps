@@ -329,6 +329,7 @@ local function scheduleTick(st)
 end
 
 local function resetGame(st)
+    st.diff = st.nextDiff
     st.pw, st.ph = fieldSize(st.win)
     st.fb = newFb(st.pw, st.ph)
     st.px = math.floor(st.pw / 2) + 0.0
@@ -405,20 +406,21 @@ local function movePlayer(st, dx, dy)
     st.py = clamp(st.py + dy, 1, st.ph)
 end
 
+local function clearShotsNear(list, x, y, r2)
+    local kept = {}
+    for _, b in ipairs(list) do
+        local dx, dy = (b.x - x) / ASPECT, b.y - y
+        if dx * dx + dy * dy > r2 then kept[#kept + 1] = b end
+    end
+    return kept
+end
+
 local function playerHit(st)
     if st.invuln > 0 then return end
     boom(st, st.px, st.py, 12)
     st.lives = st.lives - 1
     st.power = math.max(1, st.power - 1)
     st.bombs = st.diff.bombs
-    -- Clear the bullets already on top of the player so the new life does not
-    -- start inside the same wall of fire that just killed it.
-    local kept = {}
-    for _, b in ipairs(st.shots) do
-        local dx, dy = (b.x - st.px) / ASPECT, b.y - st.py
-        if dx * dx + dy * dy > 36 then kept[#kept + 1] = b end
-    end
-    st.shots = kept
     if st.lives <= 0 then
         finishGame(st)
         return
@@ -427,6 +429,12 @@ local function playerHit(st)
     st.target = nil
     st.px = math.floor(st.pw / 2) + 0.0
     st.py = st.ph - 1
+    -- Blow a hole around the respawn point so the new life does not start
+    -- inside the same wall of fire. st.blast lets updateShots apply the same
+    -- hole to the list it is rebuilding, which would otherwise put every
+    -- cleared bullet straight back.
+    st.blast = {x = st.px, y = st.py}
+    st.shots = clearShotsNear(st.shots, st.px, st.py, 36)
     setStatus(st, "Hit! " .. st.lives .. " left")
 end
 
@@ -448,18 +456,22 @@ local function useBomb(st)
     setStatus(st, "Bomb! " .. st.bombs .. " left")
 end
 
+-- The pick only arms the next game: a run that started on Easy keeps its timer,
+-- bullet speed, bomb refill and best-score slot to the end, however often the
+-- button is pressed mid-flight.
 local function cycleDiff(st)
-    local idx = diffById(st.diff.id)
+    local idx = diffById(st.nextDiff.id)
     idx = idx % #DIFFS + 1
-    st.diff = DIFFS[idx]
-    st.db.diff = st.diff.id
+    st.nextDiff = DIFFS[idx]
+    st.db.diff = st.nextDiff.id
     saveDb(st)
     if not st.started and not st.gameOver then
+        st.diff = st.nextDiff
         st.lives = st.diff.lives
         st.bombs = st.diff.bombs
         setStatus(st, "Difficulty: " .. st.diff.name)
     else
-        setStatus(st, "Difficulty: " .. st.diff.name .. " (next game)")
+        setStatus(st, "Difficulty: " .. st.nextDiff.name .. " (next game)")
     end
 end
 
@@ -612,29 +624,46 @@ end
 local function updateEnemies(st)
     local kept = {}
     for _, e in ipairs(st.enemies) do
-        updateEnemy(st, e)
         if e.hp <= 0 then
+            -- Killed by a shot or a bomb since the last update: a wreck must
+            -- not move, fire a last volley or ram the player before it goes.
             killEnemy(st, e)
-        elseif e.y > st.ph + 2 then
-            if e.kind == "boss" then st.boss = nil end
         else
-            if st.invuln <= 0 and not st.gameOver and hitsEnemy(e, st.px, st.py) then
-                playerHit(st)
+            updateEnemy(st, e)
+            if e.y > st.ph + 2 then
+                if e.kind == "boss" then st.boss = nil end
+            else
+                if st.invuln <= 0 and not st.gameOver and hitsEnemy(e, st.px, st.py) then
+                    playerHit(st)
+                end
+                kept[#kept + 1] = e
             end
-            kept[#kept + 1] = e
         end
     end
     st.enemies = kept
 end
 
+-- A player shot covers 2.4 rows per tick against a 0.6-row hit tolerance, so
+-- testing only where it lands lets it tunnel clean through a hovering turret.
+-- The whole travelled segment is tested instead, at the point where it passes
+-- the enemy's row.
+local function shotHits(e, x0, y0, x1, y1)
+    local yLo, yHi = e.y - e.hh - 0.6, e.y + e.hh + 0.6
+    if math.max(y0, y1) < yLo or math.min(y0, y1) > yHi then return false end
+    local t = 0
+    if y1 ~= y0 then t = clamp((e.y - y0) / (y1 - y0), 0, 1) end
+    return math.abs(x0 + (x1 - x0) * t - e.x) <= e.hw + 0.6
+end
+
 local function updatePlayerShots(st)
     local kept = {}
     for _, b in ipairs(st.pshots) do
+        local x0, y0 = b.x, b.y
         b.x = b.x + b.vx
         b.y = b.y + b.vy
         local hit = false
         for _, e in ipairs(st.enemies) do
-            if e.hp > 0 and hitsEnemy(e, b.x, b.y) then
+            if e.hp > 0 and shotHits(e, x0, y0, b.x, b.y) then
                 e.hp = e.hp - 1
                 st.score = st.score + 5
                 hit = true
@@ -654,6 +683,7 @@ end
 local function updateShots(st)
     local kept = {}
     local px, py = st.px, st.py
+    st.blast = nil
     for _, b in ipairs(st.shots) do
         b.x = b.x + b.vx
         b.y = b.y + b.vy
@@ -679,6 +709,12 @@ local function updateShots(st)
                 kept[#kept + 1] = b
             end
         end
+    end
+    -- Apply the respawn hole once the list is complete: filtering mid-loop
+    -- would still let every bullet processed after the hit back in.
+    if st.blast then
+        kept = clearShotsNear(kept, st.blast.x, st.blast.y, 36)
+        st.blast = nil
     end
     st.shots = kept
 end
@@ -875,12 +911,12 @@ local function drawToolbar(st, win, W)
     if W >= 30 then
         button(st, win, 1, 2, "[ New ]", colors.gray, colors.white, "new")
         button(st, win, 9, 2, "[ " .. pauseText .. " ]", pauseBg, colors.white, "pause")
-        button(st, win, 19, 2, "[ " .. st.diff.name .. " ]", colors.gray, colors.white, "diff")
-        endX = 19 + #st.diff.name + 4
+        button(st, win, 19, 2, "[ " .. st.nextDiff.name .. " ]", colors.gray, colors.white, "diff")
+        endX = 19 + #st.nextDiff.name + 4
     else
         button(st, win, 1, 2, "[N]", colors.gray, colors.white, "new")
         button(st, win, 5, 2, "[" .. string.sub(pauseText, 1, 1) .. "]", pauseBg, colors.white, "pause")
-        button(st, win, 9, 2, "[" .. string.sub(st.diff.name, 1, 1) .. "]", colors.gray, colors.white, "diff")
+        button(st, win, 9, 2, "[" .. string.sub(st.nextDiff.name, 1, 1) .. "]", colors.gray, colors.white, "diff")
         endX = 12
     end
     local hud = "W" .. st.wave .. " L" .. st.lives .. " B" .. st.bombs .. " P" .. st.power
@@ -961,11 +997,12 @@ function M.init(win, ctx)
     local db = loadDb()
     local _, diff = diffById(db.diff)
     local st = {
-        win  = win,
-        ctx  = ctx,
-        db   = db,
-        diff = diff,
-        hit  = {},
+        win      = win,
+        ctx      = ctx,
+        db       = db,
+        diff     = diff,
+        nextDiff = diff,
+        hit      = {},
     }
     resetGame(st)
     return st
