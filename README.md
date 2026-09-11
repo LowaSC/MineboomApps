@@ -28,12 +28,17 @@ expect services and IDs from the maintainer's legacy world and are included for
 development/migration work. RTC and Transformer depend on their respective
 modded peripherals or gameplay setup.
 
-| Application | Alpha status |
-|---|---|
-| Minesweeper, Snake, 2048, Tetris | Portable candidate; needs broader testing |
-| Transformer | Requires PowerGrid-compatible gameplay setup |
-| RTC | Requires RS/material peripherals and configuration |
-| Factory, RS Store, Hub | Legacy integration; not portable yet |
+| Application | Status | Controls | Required mods | Description |
+|---|---|---|---|---|
+| Factory | Works only in the developer's world | Mouse | None | Legacy factory control mirror |
+| RS Store | On hold | Mouse | RS Bridge peripheral (Refined Storage + Advanced Peripherals) | Legacy RS storage dashboard |
+| RTC — RS to chest | On hold | Mouse | RS Bridge peripheral (Refined Storage + Advanced Peripherals) | Pulls Material Checklist items from RS into a chest or buffer |
+| Hub | On hold | Mouse | None | Legacy server hub monitor |
+| Transformer | Works, not fully tested | Mouse, keyboard | PowerGrid | Winding calculator (turns ratio for target voltage) |
+| Minesweeper | Fully working | Mouse | None | Classic mines game with touch open/flag mode |
+| Snake | Fully working | Mouse or keyboard | None | Classic snake game with saved best scores |
+| 2048 | Fully working | Mouse or keyboard | None | Classic 2048 sliding tile puzzle with saved best score |
+| Tetris | Works, not fully tested | Mouse or keyboard | None | Falling blocks with next preview, ghost drop and saved best scores |
 
 ## Development
 
