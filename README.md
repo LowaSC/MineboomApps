@@ -39,12 +39,27 @@ modded peripherals or gameplay setup.
 | Snake | Fully working | Mouse or keyboard | None | Classic snake game with saved best scores |
 | 2048 | Fully working | Mouse or keyboard | None | Classic 2048 sliding tile puzzle with saved best score |
 | Tetris | Works, not fully tested | Mouse or keyboard | None | Falling blocks with next preview, ghost drop and saved best scores |
+| Sky Raid | Works, not fully tested | Mouse, touch or keyboard | None | Vertical bullet-hell shooter with enemy waves, grazing, power-ups and bosses |
+
+### Sky Raid
+
+Fly through a scrolling starfield, destroy enemy waves and fight a three-phase
+boss every fifth wave. Only the plane's central hull cell is vulnerable, so its
+wings can overlap bullets safely. Grazing bullets awards bonus points; defeated
+enemies may drop shot-power upgrades or bombs, and each difficulty keeps its own
+best score.
+
+Use the arrow keys or **WASD** to move, **Space**, **X** or **B** to use a bomb,
+**Enter** or **P** to pause, **R** or **N** to restart, and **Tab** to select the
+difficulty for the next game. On a monitor, tap the playfield to move and use
+the on-screen controls. The minimum supported window size is 20 by 12 cells.
 
 ## Development
 
 Every app is a Lua module implementing MineboomOS `init`, `draw` and `onEvent`.
 After changing an app, bump its version in `apps/index.lua`. Run `luac -p` on
-every changed Lua file before committing.
+every changed Lua file before committing. Sky Raid's gameplay regression suite
+can be run from the repository root with `lua tests/skyraid_test.lua`.
 
 The catalog format and richer requirement metadata are still evolving during
 alpha. Do not rely on it as a stable third-party API yet.
