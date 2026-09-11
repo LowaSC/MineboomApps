@@ -11,15 +11,15 @@
 local FsUtil = dofile("/os/lib/fsutil.lua")
 
 local M = {}
-M.id       = "transformer"
-M.name     = "Transformer"
+M.id       = "transformer_powergrid"
+M.name     = "Transformer (PowerGrid)"
 M.icon     = "Tx"
 M.iconBg   = colors.orange
 M.iconFg   = colors.black
 M.version  = 10
 M.category = "automation"
 
-local DB = "/data/transformer.db"
+local DB = "/data/transformer_powergrid.db"
 
 local SIZES = {
     { id = "small",  label = "[Sm]", maxTurns = 60  },
